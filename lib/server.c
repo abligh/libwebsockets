@@ -337,14 +337,26 @@ cleanup:
 				if (wsi->protocol->name == NULL)
 					break;
 			} else
-				if (wsi->protocol->name && strcmp(
-					lws_hdr_simple_ptr(wsi,
-						WSI_TOKEN_PROTOCOL),
-						      wsi->protocol->name) == 0)
-					break;
-
+				if (wsi->protocol->name) {
+					/* step through the comma separated protocol names
+					   supplied by the client */
+					char *protos = strdup(lws_hdr_simple_ptr(wsi,
+										 WSI_TOKEN_PROTOCOL));
+					char *proto = protos;
+					char *token;
+					while (NULL != (token = strsep(&proto, " \n\t\r,"))) {
+						if (strcmp(token,
+							   wsi->protocol->name) == 0) {
+							free (protos);
+							lwsl_debug("found protocol %s", wsi->protocol->name);
+							goto foundprotocol;
+						}
+					}
+					free (protos);
+				}
 			wsi->protocol++;
 		}
+	foundprotocol:
 
 		/* we didn't find a protocol he wanted? */
 
